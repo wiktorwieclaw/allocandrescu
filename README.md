@@ -1,0 +1,2 @@
+# allocandrescu
+`allocandrescu` is a allocator combinator library inspired by [Andrei Alexandrescu](https://en.wikipedia.org/wiki/Andrei_Alexandrescu)'s CppCon 2015 talk [std::allocator Is to Allocation what std::vector Is to Vexation](https://www.youtube.com/watch?v=LIb3L4vKZ7U).

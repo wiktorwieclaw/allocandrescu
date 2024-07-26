@@ -1,0 +1,10 @@
+[package]
+name = "allocandrescu"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+allocator-api2 = { version = "0.2.18", default-features = false }
+
+[dev-dependencies]
+allocator-api2 = { version = "0.2.18" }
