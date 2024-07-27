@@ -4,6 +4,10 @@ use crate::AwareAllocator;
 use allocator_api2::alloc::{AllocError, Allocator};
 use core::{alloc::Layout, ptr::NonNull};
 
+/// Fallback allocator combinator.
+///
+/// This `struct` is created by [`fallback`](crate::Allocandrescu::fallback) method on [`Allocandrescu`](crate::Allocandrescu).
+/// See its documentation for more.
 pub struct Fallback<P, S> {
     primary: P,
     secondary: S,
