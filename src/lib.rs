@@ -5,11 +5,17 @@
 //! ```
 //! use allocandrescu::Allocandrescu as _;
 //! ```
+//!
+//! # Feature flags
+//! - `bumpalo` enables support for [`bumpalo`] crate.
 #![cfg_attr(not(test), no_std)]
 
 use allocator_api2::alloc::Allocator;
 use combinator::{Cond, Fallback};
 use core::{alloc::Layout, ptr::NonNull};
+
+#[cfg(feature = "bumpalo")]
+pub use bumpalo;
 
 pub mod alloc;
 pub mod combinator;
@@ -27,7 +33,7 @@ pub trait Allocandrescu: Sized {
     ///
     /// # Example
     /// ```
-    /// use allocandrescu::{alloc::Stack, Allocandrescu, AwareAllocator as _};
+    /// use allocandrescu::{alloc::Stack, Allocandrescu as _, AwareAllocator as _};
     /// use std::ptr::{addr_of, NonNull};
     ///
     /// // Use fallback allocator for allocations larger than 16.
@@ -55,7 +61,7 @@ pub trait Allocandrescu: Sized {
     ///
     /// # Example
     /// ```
-    /// use allocandrescu::{alloc::Stack, Allocandrescu, AwareAllocator as _};
+    /// use allocandrescu::{alloc::Stack, Allocandrescu as _, AwareAllocator as _};
     /// use std::ptr::{addr_of, NonNull};
     ///
     /// let alloc = Stack::<1024>::new().fallback(std::alloc::System);

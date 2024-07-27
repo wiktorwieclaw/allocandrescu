@@ -46,6 +46,15 @@ impl<const SIZE: usize> Stack<SIZE> {
             idx: Cell::new(0),
         }
     }
+
+    /// Reset this stack allocator.
+    ///
+    /// Performs a mass deallocation on everything allocated in the stack by resetting the pointer.
+    /// Does not run any `Drop` implementations on deallocated objects.
+    #[inline]
+    pub fn reset(&mut self) {
+        self.idx.set(0)
+    }
 }
 
 unsafe impl<const SIZE: usize> Allocator for Stack<SIZE> {
@@ -90,6 +99,26 @@ impl<const SIZE: usize> AwareAllocator for Stack<SIZE> {
         let alloc_start = as_usize(ptr);
         let alloc_end = alloc_start.saturating_add(layout.size());
         stack_start <= alloc_start && stack_end >= alloc_end
+    }
+}
+
+/// Re-rexport of [`bumpalo::Bump`](https://docs.rs/bumpalo/latest/bumpalo/struct.Bump.html).
+#[cfg(feature = "bumpalo")]
+pub use bumpalo::Bump;
+
+#[cfg(feature = "bumpalo")]
+impl AwareAllocator for &Bump {
+    fn owns(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
+        unsafe {
+            self.iter_allocated_chunks_raw()
+                .any(|(chunk_ptr, chunk_size)| {
+                    let chunk_start = chunk_ptr as usize;
+                    let chunk_end = chunk_start.saturating_add(chunk_size);
+                    let alloc_start = as_usize(ptr);
+                    let alloc_end = alloc_start.saturating_add(layout.size());
+                    chunk_start <= alloc_start && chunk_end >= alloc_end
+                })
+        }
     }
 }
 
@@ -178,5 +207,30 @@ mod tests {
         let alloc = Stack::<8>::new();
         let mut v: Vec<u32, _> = Vec::new_in(&alloc);
         v.try_reserve(3).unwrap_err();
+    }
+
+    #[cfg(feature = "bumpalo")]
+    #[test]
+    fn bumpalo_is_aware_of_its_allocations() {
+        use crate::Allocandrescu as _;
+        use std::ptr::addr_of;
+
+        let bump = &Bump::with_capacity(8);
+        let alloc = bump
+            .cond(|layout| layout.size() <= 8)
+            .fallback(std::alloc::System);
+        let layout = std::alloc::Layout::new::<u8>();
+
+        let v1 = allocator_api2::vec![in &alloc; 0u8; 8];
+        assert!(bump.owns(NonNull::new(addr_of!(v1[0]).cast_mut()).unwrap(), layout));
+        assert!(bump.owns(NonNull::new(addr_of!(v1[7]).cast_mut()).unwrap(), layout));
+
+        let v2 = allocator_api2::vec![in &alloc; 0u8; 8];
+        assert!(bump.owns(NonNull::new(addr_of!(v2[0]).cast_mut()).unwrap(), layout));
+        assert!(bump.owns(NonNull::new(addr_of!(v2[7]).cast_mut()).unwrap(), layout));
+
+        let v3 = allocator_api2::vec![in &alloc; 0u8; 9];
+        assert!(!bump.owns(NonNull::new(addr_of!(v3[0]).cast_mut()).unwrap(), layout));
+        assert!(!bump.owns(NonNull::new(addr_of!(v3[8]).cast_mut()).unwrap(), layout));
     }
 }
