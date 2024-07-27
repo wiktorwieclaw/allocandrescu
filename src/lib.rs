@@ -1,4 +1,4 @@
-//! Allocator combinator library.
+//! Allocator combinators library.
 //!
 //! To extend allocators with methods in this crate, import the [`Allocandrescu`] trait:
 //!
