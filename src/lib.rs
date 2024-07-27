@@ -1,5 +1,9 @@
 //! Allocator combinators library.
 //!
+//! `allocandrescu` allows you to compose allocators using various combinators such as
+//! [`cond`](Allocandrescu::cond) and [`fallback`](Allocandrescu::fallback).
+//! It also provides a variety of simple allocators like [`Stack`](crate::alloc::Stack).
+//!
 //! This crate depends on [`allocator-api2`](https://crates.io/crates/allocator-api2), a polyfill
 //! for the unstable [`allocator_api`](https://doc.rust-lang.org/unstable-book/library-features/allocator-api.html) feature.
 //!
