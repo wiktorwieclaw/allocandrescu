@@ -25,7 +25,7 @@ impl AwareAllocator for Failing {
     }
 }
 
-/// Stack allocator.
+/// Stack-based bump allocator.
 pub struct Stack<const SIZE: usize> {
     stack: UnsafeCell<[u8; SIZE]>,
     idx: Cell<usize>,

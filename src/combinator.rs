@@ -8,7 +8,6 @@ use core::{alloc::Layout, ptr::NonNull};
 ///
 /// This `struct` is created by [`fallback`](crate::Allocandrescu::cond) method on [`Allocandrescu`](crate::Allocandrescu).
 /// See its documentation for more details.
-
 pub struct Cond<A, F> {
     alloc: A,
     pred: F,
