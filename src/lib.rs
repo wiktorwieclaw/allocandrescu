@@ -46,11 +46,10 @@ pub trait Allocandrescu: Sized {
     fn fallback<S>(self, secondary: S) -> Fallback<Self, S>
     where
         Self: AwareAllocator,
-        S: Allocator;
-}
-
-impl<A: Allocator> Allocandrescu for A {
-    fn fallback<S: Allocator>(self, secondary: S) -> Fallback<Self, S> {
+        S: Allocator,
+    {
         Fallback::new(self, secondary)
     }
 }
+
+impl<A: Allocator> Allocandrescu for A {}
