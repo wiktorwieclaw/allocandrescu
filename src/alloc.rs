@@ -1,3 +1,5 @@
+//! Basic allocators.
+
 use crate::AwareAllocator;
 use allocator_api2::alloc::{AllocError, Allocator};
 use core::{
@@ -6,6 +8,24 @@ use core::{
     ptr::{self, NonNull},
 };
 
+/// Failing Allocator.
+pub struct Failing;
+
+unsafe impl Allocator for Failing {
+    fn allocate(&self, _layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        Err(AllocError)
+    }
+
+    unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {}
+}
+
+impl AwareAllocator for Failing {
+    fn owns(&self, _ptr: NonNull<u8>, _layout: Layout) -> bool {
+        false
+    }
+}
+
+/// Stack allocator.
 pub struct Stack<const SIZE: usize> {
     stack: UnsafeCell<[u8; SIZE]>,
     idx: Cell<usize>,
@@ -14,17 +34,17 @@ pub struct Stack<const SIZE: usize> {
 impl<const SIZE: usize> Default for Stack<SIZE> {
     #[inline]
     fn default() -> Self {
-        Self {
-            stack: UnsafeCell::new([0; SIZE]),
-            idx: Default::default(),
-        }
+        Self::new()
     }
 }
 
 impl<const SIZE: usize> Stack<SIZE> {
     #[inline]
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            stack: UnsafeCell::new([0; SIZE]),
+            idx: Cell::new(0),
+        }
     }
 }
 
@@ -152,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_with_stack_allocator_fails_with_allocation() {
+    fn vec_with_stack_allocator_fails_oob_allocation() {
         use allocator_api2::vec::Vec;
 
         let alloc = Stack::<8>::new();
