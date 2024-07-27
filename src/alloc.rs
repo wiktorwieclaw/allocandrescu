@@ -12,14 +12,17 @@ use core::{
 pub struct Failing;
 
 unsafe impl Allocator for Failing {
+    #[inline]
     fn allocate(&self, _layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         Err(AllocError)
     }
 
+    #[inline]
     unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {}
 }
 
 impl AwareAllocator for Failing {
+    #[inline]
     fn owns(&self, _ptr: NonNull<u8>, _layout: Layout) -> bool {
         false
     }

@@ -14,6 +14,7 @@ pub struct Cond<A, F> {
 }
 
 impl<A, F> Cond<A, F> {
+    #[inline]
     pub fn new(alloc: A, pred: F) -> Self {
         Self { alloc, pred }
     }
@@ -32,6 +33,7 @@ where
         }
     }
 
+    #[inline]
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
         self.alloc.deallocate(ptr, layout)
     }
@@ -44,6 +46,7 @@ where
     A: AwareAllocator,
     F: Fn(Layout) -> bool,
 {
+    #[inline]
     fn owns(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
         self.alloc.owns(ptr, layout)
     }
@@ -59,14 +62,17 @@ pub struct Fallback<P, S> {
 }
 
 impl<P, S> Fallback<P, S> {
+    #[inline]
     pub fn new(primary: P, secondary: S) -> Self {
         Self { primary, secondary }
     }
 
+    #[inline]
     pub fn primary(&self) -> &P {
         &self.primary
     }
 
+    #[inline]
     pub fn secondary(&self) -> &S {
         &self.secondary
     }
@@ -97,6 +103,7 @@ where
     P: AwareAllocator,
     S: AwareAllocator,
 {
+    #[inline]
     fn owns(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
         self.primary.owns(ptr, layout) || self.secondary.owns(ptr, layout)
     }
