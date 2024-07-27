@@ -79,7 +79,7 @@ unsafe impl<const SIZE: usize> Allocator for Stack<SIZE> {
         }
     }
 
-    // TODO: override default implementations where applicable
+    // TODO: optimize default implementations where applicable
 }
 
 // TODO: test owns
