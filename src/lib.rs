@@ -1,5 +1,9 @@
 //! Allocator combinators library.
 //!
+//! This crate depends on [`allocator-api2`](https://crates.io/crates/allocator-api2), a polyfill
+//! for the unstable [`allocator_api`](https://doc.rust-lang.org/unstable-book/library-features/allocator-api.html) feature.
+//!
+//! # Usage
 //! To extend allocators with methods in this crate, import the [`Allocandrescu`] trait:
 //!
 //! ```
