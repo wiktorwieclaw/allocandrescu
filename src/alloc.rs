@@ -1,6 +1,6 @@
 //! Basic allocators.
 
-use crate::AwareAllocator;
+use crate::ArenaAllocator;
 use allocator_api2::alloc::{AllocError, Allocator};
 use core::{
     alloc::Layout,
@@ -21,9 +21,9 @@ unsafe impl Allocator for Failing {
     unsafe fn deallocate(&self, _ptr: NonNull<u8>, _layout: Layout) {}
 }
 
-impl AwareAllocator for Failing {
+impl ArenaAllocator for Failing {
     #[inline]
-    fn owns(&self, _ptr: NonNull<u8>, _layout: Layout) -> bool {
+    fn contains(&self, _ptr: NonNull<u8>, _layout: Layout) -> bool {
         false
     }
 }
@@ -95,8 +95,8 @@ unsafe impl<const SIZE: usize> Allocator for Stack<SIZE> {
 }
 
 // TODO: test owns
-impl<const SIZE: usize> AwareAllocator for Stack<SIZE> {
-    fn owns(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
+impl<const SIZE: usize> ArenaAllocator for Stack<SIZE> {
+    fn contains(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
         let stack_start = self.stack.get() as usize;
         let stack_end = stack_start.saturating_add(SIZE);
         let alloc_start = as_usize(ptr);
@@ -110,8 +110,8 @@ impl<const SIZE: usize> AwareAllocator for Stack<SIZE> {
 pub use bumpalo::Bump;
 
 #[cfg(feature = "bumpalo")]
-impl AwareAllocator for &Bump {
-    fn owns(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
+impl ArenaAllocator for &Bump {
+    fn contains(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
         unsafe {
             self.iter_allocated_chunks_raw()
                 .any(|(chunk_ptr, chunk_size)| {
@@ -225,15 +225,15 @@ mod tests {
         let layout = std::alloc::Layout::new::<u8>();
 
         let v1 = allocator_api2::vec![in &alloc; 0u8; 8];
-        assert!(bump.owns(NonNull::new(addr_of!(v1[0]).cast_mut()).unwrap(), layout));
-        assert!(bump.owns(NonNull::new(addr_of!(v1[7]).cast_mut()).unwrap(), layout));
+        assert!(bump.contains(NonNull::new(addr_of!(v1[0]).cast_mut()).unwrap(), layout));
+        assert!(bump.contains(NonNull::new(addr_of!(v1[7]).cast_mut()).unwrap(), layout));
 
         let v2 = allocator_api2::vec![in &alloc; 0u8; 8];
-        assert!(bump.owns(NonNull::new(addr_of!(v2[0]).cast_mut()).unwrap(), layout));
-        assert!(bump.owns(NonNull::new(addr_of!(v2[7]).cast_mut()).unwrap(), layout));
+        assert!(bump.contains(NonNull::new(addr_of!(v2[0]).cast_mut()).unwrap(), layout));
+        assert!(bump.contains(NonNull::new(addr_of!(v2[7]).cast_mut()).unwrap(), layout));
 
         let v3 = allocator_api2::vec![in &alloc; 0u8; 9];
-        assert!(!bump.owns(NonNull::new(addr_of!(v3[0]).cast_mut()).unwrap(), layout));
-        assert!(!bump.owns(NonNull::new(addr_of!(v3[8]).cast_mut()).unwrap(), layout));
+        assert!(!bump.contains(NonNull::new(addr_of!(v3[0]).cast_mut()).unwrap(), layout));
+        assert!(!bump.contains(NonNull::new(addr_of!(v3[8]).cast_mut()).unwrap(), layout));
     }
 }

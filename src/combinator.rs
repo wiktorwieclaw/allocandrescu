@@ -1,6 +1,6 @@
 //! Allocator combinators.
 
-use crate::AwareAllocator;
+use crate::ArenaAllocator;
 use allocator_api2::alloc::{AllocError, Allocator};
 use core::{alloc::Layout, ptr::NonNull};
 
@@ -41,14 +41,14 @@ where
     // TODO: optimize default implementations where applicable
 }
 
-impl<A, F> AwareAllocator for Cond<A, F>
+impl<A, F> ArenaAllocator for Cond<A, F>
 where
-    A: AwareAllocator,
+    A: ArenaAllocator,
     F: Fn(Layout) -> bool,
 {
     #[inline]
-    fn owns(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
-        self.alloc.owns(ptr, layout)
+    fn contains(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
+        self.alloc.contains(ptr, layout)
     }
 }
 
@@ -80,7 +80,7 @@ impl<P, S> Fallback<P, S> {
 
 unsafe impl<P, S> Allocator for Fallback<P, S>
 where
-    P: AwareAllocator,
+    P: ArenaAllocator,
     S: Allocator,
 {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
@@ -90,7 +90,7 @@ where
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-        if self.primary.owns(ptr, layout) {
+        if self.primary.contains(ptr, layout) {
             self.primary.deallocate(ptr, layout)
         } else {
             self.secondary.deallocate(ptr, layout)
@@ -98,13 +98,13 @@ where
     }
 }
 
-impl<P, S> AwareAllocator for Fallback<P, S>
+impl<P, S> ArenaAllocator for Fallback<P, S>
 where
-    P: AwareAllocator,
-    S: AwareAllocator,
+    P: ArenaAllocator,
+    S: ArenaAllocator,
 {
     #[inline]
-    fn owns(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
-        self.primary.owns(ptr, layout) || self.secondary.owns(ptr, layout)
+    fn contains(&self, ptr: NonNull<u8>, layout: Layout) -> bool {
+        self.primary.contains(ptr, layout) || self.secondary.contains(ptr, layout)
     }
 }
