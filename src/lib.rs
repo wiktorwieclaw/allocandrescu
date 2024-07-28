@@ -1,6 +1,10 @@
-//! Allocator combinators library.
+//! A collection of various allocators and allocator combinators
 //!
-//! `allocandrescu` allows you to compose allocators using various combinators such as
+//! This library is inspired by [Andrei Alexandrescu](https://en.wikipedia.org/wiki/Andrei_Alexandrescu)'s
+//! CppCon 2015 talk [std::allocator Is to Allocation what std::vector Is to Vexation](https://www.youtube.com/watch?v=LIb3L4vKZ7U)
+//! and the [Zig programming language](https://ziglang.org/).
+//! 
+//! `allocandrescu` allows you to safely compose allocators using combinators such as
 //! [`cond`](Allocandrescu::cond) and [`fallback`](Allocandrescu::fallback).
 //! It also provides a variety of simple allocators like [`Stack`](crate::alloc::Stack).
 //!
@@ -17,10 +21,27 @@
 //! ```
 //! use allocandrescu::prelude::*;
 //! ```
+//! 
+//! # Example
+//! Allocator that allocates objects smaller than 16 bytes on a stack of size 1024 bytes.
+//! For larger objects, it falls back to using the system allocator.
+//! Additionally, it prints all allocation results. 
+//! ```
+//! use allocandrescu::{alloc::Stack, prelude::*};
+//! use allocator_api2::vec;
 //!
+//! let stack = Stack::<1024>::new();
+//! let alloc = stack
+//!     .by_ref()
+//!     .cond(|layout| layout.size() <= 16)
+//!     .fallback(std::alloc::System)
+//!     .inspect(|layout, result| println!("layout: {layout:?}, result: {result:?}"));
+//! let v = vec![in &alloc; 0; 100];
+//! ```
+//! 
 //! # Feature flags
 //! - `bumpalo` enables support for [bumpalo](https://crates.io/crates/bumpalo) crate.
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, docsrs)), no_std)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 use allocator_api2::alloc::{AllocError, Allocator};
@@ -57,7 +78,7 @@ where
 
 /// Extension trait for [`Allocator`] trait that provides methods for combining allocators.
 pub trait Allocandrescu: Sized {
-    /// Combines an allocator with a predicate, failing allocation if the predicate returns `false`.
+    /// Combines an allocator with a condition. It allocates only if the condition is met.
     ///
     /// # Example
     /// ```
@@ -115,7 +136,7 @@ pub trait Allocandrescu: Sized {
 
     /// Combines allocator with a function that does something to each allocation result.
     ///
-    /// This function is useful for logging.
+    /// This combinator is useful for adding logging to allocators.
     ///
     /// # Example
     /// ```
