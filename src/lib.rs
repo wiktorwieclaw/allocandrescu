@@ -19,8 +19,9 @@
 //! ```
 //!
 //! # Feature flags
-//! - `bumpalo` enables support for [`bumpalo`] crate.
+//! - `bumpalo` enables support for [bumpalo](https://crates.io/crates/bumpalo) crate.
 #![cfg_attr(not(test), no_std)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 use allocator_api2::alloc::Allocator;
 use combinator::{Cond, Fallback};

@@ -8,7 +8,7 @@ use core::{
     ptr::{self, NonNull},
 };
 
-/// Failing Allocator.
+/// Allocator that always fails allocation.
 pub struct Failing;
 
 unsafe impl Allocator for Failing {

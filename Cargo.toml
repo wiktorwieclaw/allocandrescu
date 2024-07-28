@@ -12,6 +12,10 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/wiktorwieclaw/allocandrescu"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
 bumpalo = ["dep:bumpalo"]
 
