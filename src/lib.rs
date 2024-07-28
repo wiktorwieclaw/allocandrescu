@@ -23,8 +23,8 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
-use allocator_api2::alloc::Allocator;
-use combinator::{Cond, Fallback};
+use allocator_api2::alloc::{AllocError, Allocator};
+use combinator::{Cond, Fallback, Inspect};
 use core::{alloc::Layout, ptr::NonNull};
 
 #[cfg(feature = "bumpalo")]
@@ -57,29 +57,26 @@ where
 
 /// Extension trait for [`Allocator`] trait that provides methods for combining allocators.
 pub trait Allocandrescu: Sized {
-    /// Combines an allocator with a predicate, allowing allocation only if the predicate returns
-    /// `true`.
+    /// Combines an allocator with a predicate, failing allocation if the predicate returns `false`.
     ///
     /// # Example
     /// ```
     /// use allocandrescu::{alloc::Stack, prelude::*};
-    /// use std::ptr::{addr_of, NonNull};
+    /// use allocator_api2::vec;
+    /// use std::{alloc::Layout, ptr::{addr_of, NonNull}};
     ///
-    /// // Use fallback allocator for allocations larger than 16.
-    /// let stack = Stack::<1024>::new();
+    /// let stack = Stack::<256>::new();
     /// let alloc = stack
     ///     .by_ref()
-    ///     .cond(|layout| layout.size() <= 16)
-    ///     .fallback(std::alloc::System);
-    /// let layout = std::alloc::Layout::new::<u8>();
+    ///     .cond(|layout| layout.size() <= 16);
     ///
-    /// let mut v = allocator_api2::vec![in &alloc; 0u8; 16];
+    /// let mut v = vec![in &alloc; 0u8; 16];
+    /// let layout = Layout::new::<u8>();
     /// assert!(stack.contains(NonNull::new(addr_of!(v[0]).cast_mut()).unwrap(), layout));
     /// assert!(stack.contains(NonNull::new(addr_of!(v[15]).cast_mut()).unwrap(), layout));
     ///
-    /// v.push(0); // reallocates using fallback allocator
-    /// assert!(!stack.contains(NonNull::new(addr_of!(v[0]).cast_mut()).unwrap(), layout));
-    /// assert!(!stack.contains(NonNull::new(addr_of!(v[16]).cast_mut()).unwrap(), layout));
+    /// let result = v.try_reserve(1);
+    /// assert!(result.is_err());
     /// ```
     fn cond<F>(self, pred: F) -> Cond<Self, F>
     where
@@ -93,19 +90,19 @@ pub trait Allocandrescu: Sized {
     /// # Example
     /// ```
     /// use allocandrescu::{alloc::Stack, prelude::*};
-    /// use std::ptr::{addr_of, NonNull};
+    /// use allocator_api2::{boxed::Box, vec};
+    /// use std::{alloc::Layout, ptr::{addr_of, NonNull}};
     ///
-    /// let stack = Stack::<1024>::new();
+    /// let stack = Stack::<16>::new();
     /// let alloc = stack.by_ref().fallback(std::alloc::System);
-    /// let layout = std::alloc::Layout::new::<u8>();
+    /// let layout = Layout::new::<u8>();
     ///
-    /// // `v` allocates using `Stack`
-    /// let v = allocator_api2::vec![in &alloc; 0u8; 1024];
+    /// let v = vec![in &alloc; 0u8; 16];
     /// assert!(stack.contains(NonNull::new(addr_of!(v[0]).cast_mut()).unwrap(), layout));
-    /// assert!(stack.contains(NonNull::new(addr_of!(v[1023]).cast_mut()).unwrap(), layout));
+    /// assert!(stack.contains(NonNull::new(addr_of!(v[15]).cast_mut()).unwrap(), layout));
     ///
-    /// // `b` allocates using `System`
-    /// let b = allocator_api2::boxed::Box::new_in(0, &alloc);
+    /// // Allocate a byte even though the stack is full.
+    /// let b = Box::new_in(0, &alloc);
     /// assert!(!stack.contains(NonNull::new(addr_of!(*b).cast_mut()).unwrap(), layout));
     /// ```
     fn fallback<S>(self, secondary: S) -> Fallback<Self, S>
@@ -114,6 +111,48 @@ pub trait Allocandrescu: Sized {
         S: Allocator,
     {
         Fallback::new(self, secondary)
+    }
+
+    /// Combines allocator with a function that does something to each allocation result.
+    ///
+    /// This function is useful for logging.
+    ///
+    /// # Example
+    /// ```
+    /// use allocandrescu::{alloc::Stack, prelude::*};
+    /// use allocator_api2::vec;
+    /// use std::ptr::{addr_of, NonNull};
+    ///
+    /// let alloc = Stack::<4>::new().inspect(|layout, result| {
+    ///     match result {
+    ///         Ok(ptr) => println!(
+    ///             "alloc success: size={}, align={}, addr={}",
+    ///             layout.size(),
+    ///             layout.align(),
+    ///             ptr.as_ptr().cast::<u8>() as usize
+    ///         ),
+    ///         Err(AllocError) => println!(
+    ///             "alloc failure: size={}, align={}",
+    ///             layout.size(),
+    ///             layout.align(),
+    ///         ),
+    ///     }
+    /// });
+    ///
+    /// let mut v = vec![in &alloc; 0u8; 4];
+    /// assert!(v.try_reserve(1).is_err());
+    /// ```
+    ///
+    /// Outputs:
+    /// ```text
+    /// alloc success: size=4, align=1, addr=519418017120
+    /// alloc failure: size=8, align=1
+    /// ```
+    fn inspect<F>(self, f: F) -> Inspect<Self, F>
+    where
+        F: Fn(Layout, Result<NonNull<[u8]>, AllocError>),
+    {
+        Inspect::new(self, f)
     }
 }
 

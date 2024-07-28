@@ -9,6 +9,9 @@ use core::{
 };
 
 /// Allocator that always fails allocation.
+///
+/// Deallocation is a no-op.
+#[derive(Debug)]
 pub struct Failing;
 
 unsafe impl Allocator for Failing {
@@ -29,6 +32,7 @@ impl ArenaAllocator for Failing {
 }
 
 /// Stack-based bump allocator.
+#[derive(Debug)]
 pub struct Stack<const SIZE: usize> {
     stack: UnsafeCell<[u8; SIZE]>,
     idx: Cell<usize>,
